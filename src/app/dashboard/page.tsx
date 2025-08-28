@@ -44,6 +44,15 @@ interface ReferenceImage {
   created_at: string
 }
 
+interface ConfirmationModal {
+  isOpen: boolean
+  title: string
+  message: string
+  confirmText: string
+  confirmAction: () => void
+  isDestructive?: boolean
+}
+
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
@@ -82,6 +91,39 @@ export default function DashboardPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [hoveredReferenceImage, setHoveredReferenceImage] = useState<string | null>(null)
   const [activeReferenceImage, setActiveReferenceImage] = useState<string | null>(null) // For mobile two-step interaction
+
+  // Confirmation modal state
+  const [confirmationModal, setConfirmationModal] = useState<ConfirmationModal>({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmText: '',
+    confirmAction: () => {},
+    isDestructive: false
+  })
+
+  // Helper function to show confirmation modal
+  const showConfirmation = (
+    title: string, 
+    message: string, 
+    confirmText: string, 
+    action: () => void, 
+    isDestructive = true
+  ) => {
+    setConfirmationModal({
+      isOpen: true,
+      title,
+      message,
+      confirmText,
+      confirmAction: action,
+      isDestructive
+    })
+  }
+
+  // Helper function to close confirmation modal
+  const closeConfirmation = () => {
+    setConfirmationModal(prev => ({ ...prev, isOpen: false }))
+  }
 
   // Get user on mount
   useEffect(() => {
@@ -154,7 +196,7 @@ export default function DashboardPage() {
 
   // Handle body scroll locking for modals
   useEffect(() => {
-    if (showImageModal || showReferenceModal) {
+    if (showImageModal || showReferenceModal || confirmationModal.isOpen) {
       document.body.style.overflow = 'hidden'
     } else {
       document.body.style.overflow = 'unset'
@@ -163,7 +205,7 @@ export default function DashboardPage() {
     return () => {
       document.body.style.overflow = 'unset'
     }
-  }, [showImageModal, showReferenceModal])
+  }, [showImageModal, showReferenceModal, confirmationModal.isOpen])
 
   // Load images and reference images for selected project
   useEffect(() => {
@@ -258,10 +300,17 @@ export default function DashboardPage() {
   }
 
   const handleDeleteProject = async (projectId: string) => {
-    if (!confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
-      return
-    }
+    const project = projects.find(p => p.id === projectId)
+    showConfirmation(
+      'Delete Project',
+      `Are you sure you want to delete "${project?.title}"? This action cannot be undone and will remove all associated images.`,
+      'Delete Project',
+      () => executeDeleteProject(projectId),
+      true
+    )
+  }
 
+  const executeDeleteProject = async (projectId: string) => {
     try {
       const response = await fetch(`/api/projects?id=${projectId}`, {
         method: 'DELETE'
@@ -273,6 +322,7 @@ export default function DashboardPage() {
           setSelectedProject(null)
         }
         setIsSidebarOpen(false) // Close sidebar on mobile after deletion
+        closeConfirmation()
       } else {
         console.error('Failed to delete project:', response.statusText)
         alert('Failed to delete project')
@@ -281,6 +331,7 @@ export default function DashboardPage() {
       console.error('Error deleting project:', error)
       alert('Error deleting project')
     }
+    closeConfirmation()
   }
 
   const handleReferenceImageUpload = async (files: FileList) => {
@@ -346,8 +397,16 @@ export default function DashboardPage() {
   }
 
   const handleDeleteReferenceImage = async (refImage: ReferenceImage) => {
-    if (!confirm(`Are you sure you want to delete "${refImage.filename}"?`)) return
+    showConfirmation(
+      'Delete Reference Image',
+      `Are you sure you want to delete "${refImage.filename}"? This action cannot be undone.`,
+      'Delete Image',
+      () => executeDeleteReferenceImage(refImage),
+      true
+    )
+  }
 
+  const executeDeleteReferenceImage = async (refImage: ReferenceImage) => {
     try {
       const supabase = createClient()
       
@@ -384,6 +443,7 @@ export default function DashboardPage() {
       console.error('Error deleting reference image:', error)
       alert('Failed to delete reference image: ' + (error as Error).message)
     }
+    closeConfirmation()
   }
 
   const handlePreviewReferenceImage = (refImage: ReferenceImage) => {
@@ -444,8 +504,16 @@ export default function DashboardPage() {
   }
 
   const handleDeleteImage = async (image: DesignImage) => {
-    if (!confirm('Are you sure you want to delete this image?')) return
+    showConfirmation(
+      'Delete Generated Image',
+      'Are you sure you want to delete this generated design? This action cannot be undone.',
+      'Delete Image',
+      () => executeDeleteImage(image),
+      true
+    )
+  }
 
+  const executeDeleteImage = async (image: DesignImage) => {
     try {
       const supabase = createClient()
       
@@ -479,6 +547,7 @@ export default function DashboardPage() {
       console.error('Error deleting image:', error)
       alert('Failed to delete image')
     }
+    closeConfirmation()
   }
 
 
@@ -1502,6 +1571,50 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Confirmation Modal */}
+      {confirmationModal.isOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-dark-800 border border-dark-700 rounded-lg max-w-md w-full">
+            {/* Header */}
+            <div className="p-6 border-b border-dark-700">
+              <h3 className="text-lg font-semibold text-light-100">
+                {confirmationModal.title}
+              </h3>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <p className="text-light-300 mb-6">
+                {confirmationModal.message}
+              </p>
+
+              {/* Actions */}
+              <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
+                <button
+                  onClick={closeConfirmation}
+                  className="btn-secondary w-full sm:w-auto order-2 sm:order-1"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    confirmationModal.confirmAction()
+                    closeConfirmation()
+                  }}
+                  className={`w-full sm:w-auto order-1 sm:order-2 font-semibold py-2 px-4 rounded-lg transition-all duration-200 shadow-lg active:scale-95 flex items-center justify-center ${
+                    confirmationModal.isDestructive 
+                      ? 'bg-red-500 hover:bg-red-600 text-white hover:shadow-red-500/25' 
+                      : 'bg-primary-500 hover:bg-primary-600 text-dark-950 hover:shadow-primary-500/25'
+                  }`}
+                >
+                  {confirmationModal.confirmText}
+                </button>
               </div>
             </div>
           </div>
