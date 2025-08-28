@@ -4,12 +4,12 @@ import { Auth } from '@supabase/auth-ui-react'
 import { ThemeSupa } from '@supabase/auth-ui-shared'
 import { createClient } from '@/lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { ViewType } from '@supabase/auth-ui-shared'
 import { Leaf, Sparkles, Shield, Zap, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 
-export default function SignInPage() {
+function SignInPageContent() {
   const supabase = createClient()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -263,5 +263,20 @@ export default function SignInPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-dark-950 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 text-primary-400 animate-spin mx-auto" />
+          <p className="mt-2 text-sm text-light-300">Loading...</p>
+        </div>
+      </div>
+    }>
+      <SignInPageContent />
+    </Suspense>
   )
 } 
