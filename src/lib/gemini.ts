@@ -54,37 +54,45 @@ class GeminiImageService {
       basedOnPhoto = false
     } = params
 
-    // All generations now require a reference image
-    let enhancedPrompt = `Transform this landscape WITH MODIFICATIONS AS DESCRIBED by adding/modifying: ${prompt}. `
+    // Different approach based on whether we're changing viewpoint
+    let enhancedPrompt = ''
+    
+    if (viewAngle === 'same-as-image') {
+      // For same viewpoint, treat as an edit
+      enhancedPrompt = `Transform this landscape WITH MODIFICATIONS AS DESCRIBED. Keep the identical camera angle and perspective. Please add/modify: ${prompt}. `
+    } else {
+      // For different viewpoints, treat as a complete re-render from new perspective
+      enhancedPrompt = `Using this reference image to understand the property layout, architecture, and existing features, CREATE A COMPLETELY NEW IMAGE from a different viewpoint. The reference shows the property details, but you must generate a NEW PHOTOGRAPH from the specified camera position. Add/modify the landscape as described: ${prompt}. `
+    }
     
     // CRITICAL: Apply the exact view angle with dramatic perspective changes
     switch (viewAngle) {
       case 'same-as-image':
-        enhancedPrompt += 'MAINTAIN EXACT VIEWPOINT: Keep the identical camera angle, height, and perspective as the original reference image. Do not change the viewing position at all. '
+        enhancedPrompt += 'Keep the identical camera angle, height, and perspective as the original reference image. Do not change the viewing position at all. '
         break
       case 'ground-level':
-        enhancedPrompt += 'GROUND-LEVEL VIEW: Position the camera at human eye level (5-6 feet high) looking straight across the landscape. Show the property from a person standing on the ground perspective. '
+        enhancedPrompt += 'CRITICAL: Position the camera at human eye level (5-6 feet high) looking straight across the landscape. You are standing at the front door of the house looking OUT onto the lawn and landscape. This is a completely different viewpoint from the reference image - show what someone would see standing at the front entrance looking toward the yard and street. Show the landscape from this new perspective. '
         break
       case 'elevated':
-        enhancedPrompt += 'ELEVATED PERSPECTIVE: Position the camera significantly higher - as if taken from a 2-3 story building or drone at 30-50 feet height. Show a dramatic downward angle revealing the entire property layout, rooflines, and landscape design from above. '
+        enhancedPrompt += 'CRITICAL: Position the camera significantly higher - as if taken from a 2-3 story building or drone at 30-50 feet height. This is a completely different viewpoint from the reference image. Show a dramatic downward angle revealing the entire property layout, rooflines, and landscape design from above. Generate this new elevated perspective. '
         break
       case 'birds-eye':
-        enhancedPrompt += 'BIRDS-EYE VIEW: Position the camera directly overhead at 100+ feet height looking straight down. Show a complete top-down aerial view of the entire property, like a satellite or high-altitude drone shot. The house should appear as a rooftop and the landscape as patterns and shapes from above. '
+        enhancedPrompt += 'CRITICAL: Position the camera directly overhead at 100+ feet height looking straight down. This is a completely different viewpoint from the reference image. Show a complete top-down aerial view of the entire property, like a satellite or high-altitude drone shot. The house should appear as a rooftop and the landscape as patterns and shapes from above. Generate this new overhead perspective. '
         break
       case 'aerial':
-        enhancedPrompt += 'AERIAL VIEW: Position the camera at medium-high altitude (50-100 feet) at an angled perspective showing the property and surrounding area. Similar to helicopter or low-flying drone footage with a diagonal viewing angle. '
+        enhancedPrompt += 'CRITICAL: Position the camera at medium-high altitude (50-100 feet) at an angled perspective showing the property and surrounding area. This is a completely different viewpoint from the reference image. Similar to helicopter or low-flying drone footage. Generate this new aerial perspective. '
         break
     }
     
-    enhancedPrompt += 'Work with the existing architecture and structure shown in the photo. Preserve the character of the building while enhancing the landscape. '
+    enhancedPrompt += 'Use the reference image to understand the property details (house style, lot layout, existing features) but generate the final image from the NEW camera position specified above. '
 
     // CRITICAL: Apply the exact style specified with dramatic visual differences
     switch (style) {
       case 'photorealistic':
-        enhancedPrompt += 'PHOTOREALISTIC STYLE: Create an ultra-realistic photograph that looks like it was taken with a professional DSLR camera. Include natural imperfections, organic textures, realistic shadows, natural lighting variations, and authentic material wear. The image should be indistinguishable from a real photograph with depth of field, natural color grading, and realistic atmospheric effects. '
+        enhancedPrompt += 'Create an ultra-realistic photograph that looks like it was taken with a professional DSLR camera. Include natural imperfections, organic textures, realistic shadows, natural lighting variations, and authentic material wear. The image should be indistinguishable from a real photograph with depth of field, natural color grading, and realistic atmospheric effects. '
         break
       case '3d-render':
-        enhancedPrompt += 'CAD 3D RENDER STYLE: Create a computer-generated 3D architectural rendering that looks like output from CAD software (AutoCAD, SketchUp, Revit). Use clean geometric shapes, perfectly straight lines, uniform lighting, smooth surfaces, and a slightly artificial/digital appearance. Materials should look pristine and new with no weathering. Use consistent lighting with minimal shadows, bright even illumination, and a polished computer-graphics aesthetic. The overall look should be clearly digital and architectural-software-generated, not photographic. '
+        enhancedPrompt += 'CCreate a computer-generated 3D architectural rendering that looks like output from CAD software (AutoCAD, SketchUp, Revit). Use clean geometric shapes, perfectly straight lines, uniform lighting, smooth surfaces, and an artificial/digital appearance. Materials should look pristine and new with no weathering. Use consistent lighting with minimal shadows, bright even illumination, and a polished computer-graphics aesthetic. The overall look should be clearly digital and architectural-software-generated, not photographic. '
         break
     }
 
@@ -94,45 +102,45 @@ class GeminiImageService {
     // Season-specific details
     switch (season) {
       case 'spring':
-        enhancedPrompt += 'SPRING SEASON: Show fresh green grass, blooming flowers, budding trees with new leaves, mild temperatures. Include spring flowers like tulips, daffodils, or cherry blossoms. Grass should be vibrant green and growing. '
+        enhancedPrompt += 'Show fresh green grass, blooming flowers, budding trees with new leaves, mild temperatures. Include spring flowers like tulips, daffodils, or cherry blossoms. Grass should be vibrant green and growing. '
         break
       case 'summer':
-        enhancedPrompt += 'SUMMER SEASON: Show lush, full green vegetation, mature leaves on all trees, bright sunny conditions, fully grown grass and plants. Include summer flowers in full bloom. Everything should look abundant and fully grown. '
+        enhancedPrompt += 'Show lush, full green vegetation, mature leaves on all trees, bright sunny conditions, fully grown grass and plants. Include summer flowers in full bloom. Everything should look abundant and fully grown. '
         break
       case 'fall':
-        enhancedPrompt += 'FALL/AUTUMN SEASON: Show dramatic fall colors with trees displaying orange, red, yellow, and brown leaves. Include fallen leaves on the ground, some bare branches, and autumn landscaping. Grass may be slightly less green. '
+        enhancedPrompt += 'Show dramatic fall colors with trees displaying orange, red, yellow, and brown leaves. Include fallen leaves on the ground, some bare branches, and autumn landscaping. Grass may be slightly less green. '
         break
       case 'winter':
-        enhancedPrompt += 'WINTER SEASON: Show bare deciduous trees, evergreens with snow, dormant brown grass, winter landscaping. Include snow on surfaces if appropriate for the climate, frost effects, and winter lighting conditions. '
+        enhancedPrompt += 'Show bare deciduous trees, evergreens with snow, dormant brown grass, winter landscaping. Include snow on surfaces if appropriate for the climate, frost effects, and winter lighting conditions. '
         break
     }
     
     // Time of day lighting
     switch (timeOfDay) {
       case 'morning':
-        enhancedPrompt += 'MORNING LIGHTING: Show soft, warm golden light from the east, long shadows, dew or moisture effects, cooler color temperature gradually warming up. '
+        enhancedPrompt += 'Show soft, warm golden light from the east, long shadows, dew or moisture effects, cooler color temperature gradually warming up. '
         break
       case 'afternoon':
-        enhancedPrompt += 'AFTERNOON LIGHTING: Show bright, direct sunlight from overhead, shorter shadows, warm bright lighting, clear visibility of all details. '
+        enhancedPrompt += 'Show bright, direct sunlight from overhead, shorter shadows, warm bright lighting, clear visibility of all details. '
         break
       case 'evening':
-        enhancedPrompt += 'EVENING LIGHTING: Show warm golden hour light from the west, long dramatic shadows, warm orange/pink color temperature, beautiful sunset lighting effects. '
+        enhancedPrompt += 'Show warm golden hour light from the west, long dramatic shadows, warm orange/pink color temperature, beautiful sunset lighting effects. '
         break
     }
     
     // Weather conditions
     switch (weatherCondition) {
       case 'sunny':
-        enhancedPrompt += 'SUNNY WEATHER: Show clear blue skies, bright direct sunlight, sharp shadows, excellent visibility, vibrant colors. '
+        enhancedPrompt += 'Show clear blue skies, bright direct sunlight, sharp shadows, excellent visibility, vibrant colors. '
         break
       case 'cloudy':
-        enhancedPrompt += 'CLOUDY WEATHER: Show scattered clouds in the sky, soft diffused lighting, gentle shadows, pleasant lighting conditions. '
+        enhancedPrompt += 'Show scattered clouds in the sky, soft diffused lighting, gentle shadows, pleasant lighting conditions. '
         break
       case 'overcast':
-        enhancedPrompt += 'OVERCAST WEATHER: Show completely overcast skies with thick cloud cover, very soft diffused lighting, minimal shadows, muted colors, grey sky conditions. '
+        enhancedPrompt += 'Show completely overcast skies with thick cloud cover, very soft diffused lighting, minimal shadows, muted colors, grey sky conditions. '
         break
       case 'dramatic-sky':
-        enhancedPrompt += 'DRAMATIC SKY: Show striking, dynamic cloud formations, interesting sky patterns, dramatic lighting effects, possibly storm clouds or sunset/sunrise drama in the sky. '
+        enhancedPrompt += 'Show striking, dynamic cloud formations, interesting sky patterns, dramatic lighting effects, possibly storm clouds or sunset/sunrise drama in the sky. '
         break
     }
     
@@ -145,8 +153,11 @@ class GeminiImageService {
     enhancedPrompt += 'Pay careful attention to spatial relationships, scale, proportions, and how different elements interact with each other and the existing architecture. '
     enhancedPrompt += 'Ensure the design looks professionally planned and executable by a landscaping contractor. '
 
-    // Add final instruction for image-only output
-    enhancedPrompt += 'Output: Return ONLY the final edited image. Do not return text.'
+    // Add final instruction for image-only output and viewpoint clarity
+    if (viewAngle !== 'same-as-image') {
+      enhancedPrompt += 'IMPORTANT: Do NOT simply edit or modify the reference image. Instead, imagine you are a photographer taking a completely new photograph of this same property from the specified camera position. Generate what the camera would capture from that new angle and position. '
+    }
+    enhancedPrompt += 'Output: Return ONLY the final image. Do not return text.'
 
     console.log('enhancedPrompt', enhancedPrompt)
 
@@ -198,9 +209,9 @@ class GeminiImageService {
         partsCount: parts.length,
         hasApiKey: !!this.getApiKey(),
         generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
+          temperature: 0.4, // Lower temperature for more consistency with original
+          topK: 20, // Reduced for more focused responses
+          topP: 0.8, // Slightly lower for more predictable outputs
           maxOutputTokens: 1024,
         }
       })
@@ -219,9 +230,9 @@ class GeminiImageService {
             }
           ],
           generationConfig: {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
+            temperature: 0.4, // Lower temperature for more consistency with original
+            topK: 20, // Reduced for more focused responses  
+            topP: 0.8, // Slightly lower for more predictable outputs
             maxOutputTokens: 1024,
           }
         })

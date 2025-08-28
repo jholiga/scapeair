@@ -6,6 +6,7 @@ interface CreateProjectRequest {
   description?: string
   client_name?: string
   client_email?: string
+  status?: 'draft' | 'in_progress' | 'completed' | 'archived'
 }
 
 export async function POST(request: NextRequest) {
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
         description: body.description?.trim() || null,
         client_name: body.client_name?.trim() || null,
         client_email: body.client_email?.trim() || null,
-        status: 'draft'
+        status: body.status || 'draft'
       })
       .select()
       .single()
@@ -99,6 +100,113 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('API error fetching projects:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const supabase = await createServerClient()
+    
+    // Get authenticated user
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    // Get project ID from URL
+    const url = new URL(request.url)
+    const projectId = url.searchParams.get('id')
+    
+    if (!projectId) {
+      return NextResponse.json(
+        { error: 'Project ID is required' },
+        { status: 400 }
+      )
+    }
+
+    // Delete the project (only if user owns it)
+    const { error: deleteError } = await supabase
+      .from('projects')
+      .delete()
+      .eq('id', projectId)
+      .eq('user_id', user.id) // Ensure user can only delete their own projects
+
+    if (deleteError) {
+      console.error('Database error deleting project:', deleteError)
+      return NextResponse.json(
+        { error: 'Failed to delete project' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ success: true })
+
+  } catch (error) {
+    console.error('API error deleting project:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const supabase = await createServerClient()
+    
+    // Get authenticated user
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    // Get project ID from URL
+    const url = new URL(request.url)
+    const projectId = url.searchParams.get('id')
+    
+    if (!projectId) {
+      return NextResponse.json(
+        { error: 'Project ID is required' },
+        { status: 400 }
+      )
+    }
+
+    // Parse request body
+    const body = await request.json()
+    
+    // Update the project (only if user owns it)
+    const { data: project, error: updateError } = await supabase
+      .from('projects')
+      .update(body)
+      .eq('id', projectId)
+      .eq('user_id', user.id) // Ensure user can only update their own projects
+      .select()
+      .single()
+
+    if (updateError) {
+      console.error('Database error updating project:', updateError)
+      return NextResponse.json(
+        { error: 'Failed to update project' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ project })
+
+  } catch (error) {
+    console.error('API error updating project:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
