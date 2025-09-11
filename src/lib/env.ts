@@ -37,6 +37,6 @@ export const env = {
   },
   
   get NEXT_PUBLIC_APP_URL() {
-    return getEnvVar('NEXT_PUBLIC_APP_URL', 'http://localhost:3000')
+    return getEnvVar('NEXT_PUBLIC_APP_URL')
   },
 } 
